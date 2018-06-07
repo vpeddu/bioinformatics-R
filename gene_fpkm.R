@@ -5,8 +5,11 @@ library(GenomicAlignments)
 library(biomaRt)
 library(edgeR)
 
+args = commandArgs(trailingOnly=TRUE)
+filename<-args[1]
+datasetname<-args[2]
 #imports bam file
-my.reads <- readGAlignments(file='human_239t_aligned.sam',use.names = TRUE)
+my.reads <- readGAlignments(file=filename,use.names = TRUE)
 
 
 #write.csv(as.list(alignedreads), 'namesadsfa.txt')
@@ -23,10 +26,10 @@ colnames(nameslist)[2]<-'Genes'
 uniquenames<-unique(nameslist)
 
 #biomart pulls gene ids, transcript length, and descriptions corresponding to transcript ids 
-mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+mart <- useMart(biomart = "ensembl", dataset = datasetname)
 results<-getBM(attributes = c("ensembl_transcript_id_version", "external_gene_name","description","transcript_length"),
-                filters = "ensembl_transcript_id_version", values = uniquenames$Reads,
-                mart = mart)
+               filters = "ensembl_transcript_id_version", values = uniquenames$Reads,
+               mart = mart)
 results[,5]<-0
 colnames(results)[5]<-'read_count'
 #matches read counts to the transcript IDs 
@@ -49,7 +52,8 @@ for (i in 1:length(results$ensembl_transcript_id)) {
   print(i)
 }
 
-write.csv(results, '293t_table.csv')
+csv_filename<-paste0(filename,".csv")
+write.csv(results, csv_filename)
 
 
 
