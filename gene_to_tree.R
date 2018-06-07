@@ -1,10 +1,10 @@
+#Takes sample gff3 + fasta, root gff3 + fasta, gene, and makes gene tree 
 library (ape)
 library(seqinr)
 library(Biostrings)
 library(rtracklayer)
 
 #input gene name, sequence file names 
-#requires z29 genome 
 #args[1]=gff file name
 #args[2]= gene name 
 #args[3]= fasta file name 
