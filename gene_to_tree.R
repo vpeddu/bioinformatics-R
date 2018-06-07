@@ -5,33 +5,42 @@ library(rtracklayer)
 
 #input gene name, sequence file names 
 #requires z29 genome 
-geneanalyze<- function(gfffile, genename, fastafile )
-{
- #make data frames from gff3 start/end to pull data from
-  #bind z29 to fastas 
-  
-  importedgffs<-readGFF(gfffile, version=3,
-                   columns=NULL, tags=NULL, filter=NULL, nrows=-1,
-                   raw_data=FALSE)
+#args[1]=gff file name
+#args[2]= gene name 
+#args[3]= fasta file name 
+#args[4]= root gff3
+#args[5]=root fasta
+
+options(echo=TRUE)
+args <- commandArgs(trailingOnly = TRUE)
+
+#imports gff files
+  importedgffs<-readGFF(args[1], version=3,
+                        columns=NULL, tags=NULL, filter=NULL, nrows=-1,
+                        raw_data=FALSE)
   importedgffcondensed <- importedgffs[,c('seqid','start','end','ID','Note')] 
   
-  z29root<- readGFF("z29.gff3",version=3,
+#imports z29 root gff3 and fasta
+  root<- readGFF(args[4],version=3,
                     columns=NULL, tags=NULL, filter=NULL, nrows=-1,
                     raw_data=FALSE)
-  z29root <- z29root[,c('seqid','start','end','ID','Note')] 
+  root <- root[,c('seqid','start','end','ID','Note')] 
+  z29rootfasta <- readDNAStringSet(args[5])
   
-  rooted<-rbind(z29root,importedgffcondensed)
-  rootedfiltered<-subset(rooted, rooted$Note==genename)
+  
+#attaches z29 root to other files 
+  rooted<-rbind(root,importedgffcondensed)
+  rootedfiltered<-subset(rooted, rooted$Note==args[2])
   rownumber<-nrow(rootedfiltered)
-  sequences <- readDNAStringSet(fastafile)
+  sequences <- readDNAStringSet(args[3])
   
-  #makes new directory
-  newdir <- paste0(genename)
+#makes new directory for fasta files 
+  newdir <- paste0(args[2])
   cwd=getwd()
   dir.create(newdir)
   setwd(newdir)
   
-  #for csv file
+#blank lists for geneinfo table
   startpositionslist<-list()
   endpositionlist<-list()
   genenames<-list()
@@ -52,37 +61,31 @@ geneanalyze<- function(gfffile, genename, fastafile )
       writeXStringSet(z, q, format='fasta')
     }
     , error=function(e) print (q)
-
     )
-
     }
-
   }
-geneinfotable<- data.frame(unlist(genenames),unlist(startpositionslist),unlist(endpositionlist),unlist(genewidth))
-filename<- paste(genename , ".csv")
-colnames(geneinfotable)[1]<-'accession number'
-colnames(geneinfotable)[2]<-'start position'
-colnames(geneinfotable)[3]<-'end position'
-colnames(geneinfotable)[4]<-'width'
-write.csv(geneinfotable, file=filename)
-
- # foldername<-c(genename)
- # write.csv(foldername, file=foldername)
- # write.table(foldername, file=foldername)
-
- system("
-        lastdir=`ls -tr &lt;parentdir&gt; | tail -1`
-        cd lastdir
-        cat *.fasta >${PWD##*/}combined.fasta
-        mafft ${PWD##*/}combined.fasta >  ${PWD##*/}aligned.fasta
-        echo ${PWD##*/}aligned.fasta
-        PATH=$PATH:~/Desktop/fasttree/
-        FastTree -gtr -nt < ${PWD##*/}aligned.fasta > ${PWD##*/}tree.newick
-        echo ${PWD##*/}tree.newick
-        cd -
-        ")
- setwd(cwd)
- 
-quit(save="no")
-}
-
+  #makes geneinfo table
+  geneinfotable<- data.frame(unlist(genenames),unlist(startpositionslist),unlist(endpositionlist),unlist(genewidth))
+  filename<- paste(args[2] , ".csv")
+  colnames(geneinfotable)[1]<-'accession number'
+  colnames(geneinfotable)[2]<-'start position'
+  colnames(geneinfotable)[3]<-'end position'
+  colnames(geneinfotable)[4]<-'width'
+  write.csv(geneinfotable, file=filename)
+  
+  
+#system commands to concatenate, align, and run fasttree on fasta files 
+  system("
+         lastdir=`ls -tr &lt;parentdir&gt; | tail -1`
+         cd lastdir
+         cat *.fasta >${PWD##*/}combined.fasta
+         mafft ${PWD##*/}combined.fasta >  ${PWD##*/}aligned.fasta
+         echo ${PWD##*/}aligned.fasta
+         PATH=$PATH:~/Desktop/fasttree/
+         FastTree -gtr -nt < ${PWD##*/}aligned.fasta > ${PWD##*/}tree.newick
+         echo ${PWD##*/}tree.newick
+         cd -
+         ")
+  setwd(cwd)
+  
+  quit(save="no")
